@@ -18,10 +18,10 @@ B6-2: 내가 고친 코드 설명을 AI가 대신 써주는 도우미
   --max-tokens     AI API max_tokens (기본: 500, 출력 길이 제한)
 
 환경변수:
-  AI_API_KEY     NVIDIA NIM API Key (필수 — Models 확장 권한)
-                  발급: https://build.nvidia.com → Models 체크
+  AI_API_KEY     NVIDIA NIM API Key (필수, nvapi-... 형식)
+                  발급: https://build.nvidia.com → Settings → API Keys
   AI_API_URL     API 엔드포인트 (기본: NVIDIA NIM)
-  AI_MODEL       모델명 (기본: meta/llama-3.3-70b-instruct, Llama 3.3 70B, DeepSeek R1, Nemotron 등)
+  AI_MODEL       모델명 (기본: meta/llama-3.1-8b-instruct, 3초 응답. 70b, Phi-3 등 선택 가능)
   AI_MOCK_MODE   true 설정 시 mock 모드 (개발/테스트용)
 """
 import sys
@@ -126,10 +126,10 @@ def main():
   python main.py pr --max-tokens 1000            # 더 긴 출력 허용
 
 NVIDIA NIM 설정 (.env 파일 사용):
-  1. PAT 발급: https://build.nvidia.com → Settings → API Keys
+  1. API Key 발급: https://build.nvidia.com → Settings → API Keys
   2. .env 파일 생성:
      cp .env.example .env
-     # .env 파일에서 AI_API_KEY 값을 실제 PAT으로 수정
+     # .env 파일에서 AI_API_KEY 값을 실제 NVIDIA NIM API Key(nvapi-...)로 수정
   3. 실행:
      python main.py commit
 
@@ -138,9 +138,9 @@ NVIDIA NIM 설정 (.env 파일 사용):
      python main.py commit
 
 환경변수:
-  AI_API_KEY     NVIDIA NIM API Key (필수 — Models 확장 권한)
+  AI_API_KEY     NVIDIA NIM API Key (필수, nvapi-... 형식)
   AI_API_URL     API 엔드포인트 (기본: https://integrate.api.nvidia.com/v1/chat/completions)
-  AI_MODEL       모델명 (기본: meta/llama-3.3-70b-instruct, Llama 3.3 70B, DeepSeek R1, Nemotron 등)
+  AI_MODEL       모델명 (기본: meta/llama-3.1-8b-instruct, 3초 응답. 70b, Phi-3 등 선택 가능)
   AI_MOCK_MODE   true 설정 시 mock 모드 (개발/테스트용)
 """,
     )

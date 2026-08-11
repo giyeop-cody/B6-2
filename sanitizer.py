@@ -7,9 +7,13 @@ import re
 
 # 마스킹할 패턴들
 PATTERNS = [
-    # API Key 형태 (sk-xxx, ghp_xxx, sb_publishable_xxx 등)
+    # NVIDIA NIM API Key (nvapi-xxx) — 본 프로젝트가 사용하는 API
+    (re.compile(r'(nvapi-[a-zA-Z0-9_\-]{20,})'), 'nvapi-***MASKED***'),
+    # OpenAI API Key (sk-xxx)
     (re.compile(r'(sk-[a-zA-Z0-9]{20,})'), 'sk-***MASKED***'),
+    # GitHub Personal Access Token (ghp_xxx)
     (re.compile(r'(ghp_[a-zA-Z0-9]{36})'), 'ghp_***MASKED***'),
+    # Supabase 키
     (re.compile(r'(sb_publishable_[a-zA-Z0-9]+)'), 'sb_publishable_***MASKED***'),
     (re.compile(r'(sb_secret_[a-zA-Z0-9]+)'), 'sb_secret_***MASKED***'),
     # 이메일

@@ -28,7 +28,7 @@
 | **API Key** | AI 서비스에 접근하기 위한 비밀번호 | 출입증 (없으면 들어갈 수 없음) |
 | **NVIDIA NIM** | NVIDIA에서 제공하는 AI 모델 호출 서비스 | AI 모델을 빌려주는 대여소 |
 | **모델 (Model)** | 텍스트를 이해하고 생성하는 AI의 두뇌 | 요리사 (입력=재료, 출력=요리) |
-| **llama-3.3-70b** | 이 과제에서 사용한 AI 모델 이름 | 요리사의 이름과 경력 |
+| **llama-3.1-8b** | 이 과제에서 사용한 AI 모델 이름 | 요리사의 이름과 경력 |
 | **프롬프트 (Prompt)** | AI에게 주는 지시문. "어떻게 부탁하느냐"가 결과 품질을 결정 | 요리 주문서 ("매운맛으로, 덜 익혀서") |
 | **temperature** | AI의 창의성 조절값. 낮을수록 일관됨, 높을수록 다양함 | 요리사의 자유도 (낮음=레시피대로, 높음=즉흥) |
 | **max_tokens** | AI가 생성할 수 있는 최대 글자 수 | 요리의 최대 분량 |
@@ -160,7 +160,7 @@ AI가 커밋 메시지 / PR 설명 생성
   POST https://integrate.api.nvidia.com/v1/chat/completions
   Headers: Authorization: Bearer nvapi-xxxxx
   Body: {
-    "model": "meta/llama-3.3-70b-instruct",
+    "model": "meta/llama-3.1-8b-instruct",
     "messages": [
       { "role": "system", "content": "너는 시니어 개발자야" },
       { "role": "user", "content": "이 diff에 대한 커밋 메시지 써줘: ..." }
@@ -271,7 +271,7 @@ response = requests.post(
     "https://integrate.api.nvidia.com/v1/chat/completions",
     headers={"Authorization": "Bearer nvapi-YOUR_KEY"},
     json={
-        "model": "meta/llama-3.3-70b-instruct",
+        "model": "meta/llama-3.1-8b-instruct",
         "messages": [{"role": "user", "content": "안녕하세요!"}],
         "max_tokens": 50
     }
@@ -455,18 +455,18 @@ Job 7 (문서화)
 | 기준 | NVIDIA NIM | OpenAI |
 |------|-----------|--------|
 | 비용 | 무료 크레딧 | 유료 (사용량 기반) |
-| 모델 | llama-3.3-70b-instruct | GPT-4o 등 |
-| API 형식 | OpenAI 호환 (동일한 형식) | 표준 |
+| 모델 | llama-3.1-8b-instruct | GPT-4o 등 |
+| API 형식 | chat/completions 표준 포맷 | 업계 표준 |
 | 가용성 | NVIDIA 플랫폼 안정성 | 업계 표준 |
 
 #### ✅ 선택: NVIDIA NIM
 
-**이유:** 무료 크레딧으로 비용 부담 없이 테스트 가능, OpenAI 호환 엔드포인트라 코드 구조가 동일함
+**이유:** 무료 크레딧으로 비용 부담 없이 테스트 가능, chat/completions 표준 포맷이라 코드 구조가 단순함
 
 #### ⚖️ 트레이드오프
 - **포기한 것:** OpenAI의 더 큰 커뮤니티와 튜토리얼
-- **얻은 것:** 무료, llama-3.3-70b의 충분한 성능
-- **판단:** 커밋 메시지 생성에는 llama-3.3-70b가 충분
+- **얻은 것:** 무료, llama-3.1-8b의 충분한 성능
+- **판단:** 커밋 메시지 생성에는 llama-3.1-8b가 충분
 
 ---
 
@@ -615,7 +615,7 @@ AI가 너무 긴 메시지를 생성하거나 Conventional Commits 양식을 안
 
 | 주제 | 이 과제에서 | 다음에 배울 것 |
 |------|-----------|---------------|
-| AI 모델 | llama-3.3-70b (텍스트 생성) | 코드 생성, 이미지 생성, 임베딩 |
+| AI 모델 | llama-3.1-8b (텍스트 생성) | 코드 생성, 이미지 생성, 임베딩 |
 | 프롬프트 | 단일 턴 (한 번 요청) | 멀티 턴 (대화), Few-shot 예제 |
 | 자동화 | 커밋/PR 초안 생성 | git push, GitHub PR 생성 (API 연동) |
 | 검증 | 길이/형식 검증 | 코드 리뷰 자동화, 테스트 생성 |

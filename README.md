@@ -21,11 +21,11 @@
 
 ### NVIDIA NIM 설정 (.env 파일 사용)
 
-1. **PAT 발급**: https://build.nvidia.com → Settings → API Keys
+1. **API Key 발급**: https://build.nvidia.com → Settings → API Keys
 2. **.env 파일 생성**:
 ```bash
 cp .env.example .env
-# .env 파일을 열어서 AI_API_KEY 값을 실제 PAT으로 수정
+# .env 파일을 열어서 AI_API_KEY 값을 실제 NVIDIA NIM API Key(nvapi-...)로 수정
 ```
 3. **실행**:
 ```bash
@@ -92,8 +92,9 @@ b6-2-app/
 
 | 패턴 | 마스킹 예시 |
 |------|------------|
-| `sk-xxx` (NVIDIA NIM) | `sk-***MASKED***` |
-| `ghp_xxx` (NVIDIA NIM API Key) | `ghp_***MASKED***` |
+| `nvapi-xxx` (NVIDIA NIM API Key) | `nvapi-***MASKED***` |
+| `sk-xxx` (OpenAI API Key) | `sk-***MASKED***` |
+| `ghp_xxx` (GitHub PAT) | `ghp_***MASKED***` |
 | 이메일 | `***@***.***` |
 | `password=xxx` | `password=***MASKED***` |
 | JWT (`eyJ...`) | `***JWT_MASKED***` |
@@ -104,12 +105,12 @@ b6-2-app/
 
 | 항목 | 내용 |
 |------|------|
-| 인증 | NVIDIA NIM API Key (Models 확장 권한) |
+| 인증 | NVIDIA NIM API Key (nvapi-...) |
 | 엔드포인트 | https://integrate.api.nvidia.com/v1/chat/completions |
-| 기본 모델 | meta/llama-3.3-70b-instruct |
+| 기본 모델 | meta/llama-3.1-8b-instruct (3초 응답) |
 | 무료 한도 | 1,000 credits, 40 RPM |
 | 신용카드 | 불필요 |
-|  | 기존 /코드 그대로 사용 |
+| 모델 변경 이력 | 70b(176초 타임아웃) → 8b(3초, 65배 개선) |
 
 ### 다른 모델 사용
 ```bash
@@ -125,7 +126,7 @@ export AI_MODEL="Phi-3-medium-128k-instruct" # Phi-3
 ```
 [INFO] Git status 수집 완료: 3개 파일 변경 감지
 [INFO] Git diff 수집 완료: 128줄
-[INFO] AI API 요청 중... (model=meta/llama-3.3-70b-instruct, temperature=0.3, max_tokens=500)
+[INFO] AI API 요청 중... (model=meta/llama-3.1-8b-instruct, temperature=0.3, max_tokens=500)
 [DONE] 커밋 메시지 생성 완료
 [INFO] AI API 호출 횟수: 1
 
@@ -139,8 +140,8 @@ feat: Git 변경 사항 기반 커밋 메시지 자동 생성 기능 추가
 ### API Key 미설정
 ```
 [ERROR] AI_API_KEY 환경변수가 설정되지 않았습니다.
-  예) export AI_API_KEY="ghp_your_github_personal_access_token"
-  PAT 발급: https://build.nvidia.com → Models 권한만 체크
+  예) export AI_API_KEY="nvapi-your_nvidia_nim_api_key"
+  API Key 발급: https://build.nvidia.com → Settings → API Keys
 ```
 
 ### 변경사항 없음

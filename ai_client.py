@@ -7,15 +7,15 @@ AI 클라이언트 모듈
 - 1회 실행 = 1회 API 호출
 
 AI API: NVIDIA NIM
-- 인증: GitHub Personal Access Token (Models 권한)
+- 인증: NVIDIA NIM API Key (nvapi-...)
 - 엔드포인트: https://integrate.api.nvidia.com/v1/chat/completions
-- 모델: meta/llama-3.3-70b-instruct (기본), Llama 3.3 70B, Phi-3 등 선택 가능
+- 모델: meta/llama-3.1-8b-instruct (기본, 3초 응답), llama-3.3-70b, Phi-3 등 선택 가능
 - 무료 (1,000 credits, 40 RPM), 신용카드 불필요
 
 환경변수:
-  AI_API_KEY    NVIDIA NIM API Key (필수 — Models 확장 권한)
+  AI_API_KEY    NVIDIA NIM API Key (필수, nvapi-... 형식)
   AI_API_URL    API 엔드포인트 (기본: NVIDIA NIM)
-  AI_MODEL      모델명 (기본: meta/llama-3.3-70b-instruct)
+  AI_MODEL      모델명 (기본: meta/llama-3.1-8b-instruct)
   AI_MOCK_MODE  true 설정 시 mock 모드 (개발/테스트용)
 """
 import os
@@ -28,7 +28,7 @@ class AIClient:
     def __init__(self, temperature=0.3, max_tokens=500):
         self.api_key = os.environ.get("AI_API_KEY", "")
         self.api_url = os.environ.get("AI_API_URL", "https://integrate.api.nvidia.com/v1/chat/completions")
-        self.model = os.environ.get("AI_MODEL", "meta/llama-3.3-70b-instruct")
+        self.model = os.environ.get("AI_MODEL", "meta/llama-3.1-8b-instruct")
         self.temperature = temperature
         self.max_tokens = max_tokens
         self.is_mock = os.environ.get("AI_MOCK_MODE", "").lower() in ("true", "1", "yes")
@@ -37,7 +37,7 @@ class AIClient:
         """API Key 설정 여부 확인 (제약사항: 환경변수로만 관리)"""
         if not self.api_key:
             print("[ERROR] AI_API_KEY 환경변수가 설정되지 않았습니다.")
-            print('  예) export AI_API_KEY="ghp_your_github_personal_access_token"')
+            print('  예) export AI_API_KEY="nvapi-your_nvidia_nim_api_key"')
             print("  API Key 발급: https://build.nvidia.com → Settings → API Keys")
             return False
         return True
