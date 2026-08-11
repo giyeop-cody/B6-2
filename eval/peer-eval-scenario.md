@@ -2,7 +2,7 @@
 
 > **과제**: 내가 고친 코드 설명을 AI가 대신 써주는 도우미 만들기
 > **과목**: 클라우드와 AI API | **난이도**: ★☆☆ | **과제번호**: 185016
-> **GitHub**: giyeop-cody/B6-2 | **실행**: `python main.py --commit` / `python main.py --pr`
+> **GitHub**: giyeop-cody/B6-2 | **실행**: `python main.py commit` / `python main.py pr`
 
 ---
 
@@ -10,7 +10,7 @@
 
 ### 1-1. AI API 연동
 
-AI API는 외부 AI 모델의 텍스트 생성 기능을 애플리케이션에서 호출하는 방식이다. 본 프로젝트는 NVIDIA NIM(`https://integrate.api.nvidia.com/v1/chat/completions`)을 사용하며, 모델은 `meta/llama-3.3-70b-instruct`이다. OpenAI 호환 엔드포인트이므로 표준 `chat/completions` 형식으로 요청한다. 요청은 HTTP POST로 headers에 `Authorization: Bearer {API_KEY}`, body에 `model`, `messages`, `temperature`, `max_tokens`를 담는다.
+AI API는 외부 AI 모델의 텍스트 생성 기능을 애플리케이션에서 호출하는 방식이다. 본 프로젝트는 NVIDIA NIM(`https://integrate.api.nvidia.com/v1/chat/completions`)을 사용하며, 모델은 `meta/llama-3.1-8b-instruct`이다. 표준 `chat/completions` 형식으로 요청한다. 요청은 HTTP POST로 headers에 `Authorization: Bearer {API_KEY}`, body에 `model`, `messages`, `temperature`, `max_tokens`를 담는다.
 
 ### 1-2. 프롬프트 설계
 
@@ -34,7 +34,7 @@ AI가 품질 높은 결과를 내려면 프롬프트를 정교하게 설계해�
 
 ### 1-5. 민감정보 마스킹
 
-`git diff`에 API Key, 이메일, IP 주소 등이 포함될 수 있다. 이를 그대로 AI API에 보내면 AI 서버에 저장될 수 있어 유출 위험이 있다. `sanitizer.py`에서 정규식으로 감지하여 마스킹 처리 후 프롬프트에 포함한다.
+`git diff`에 API Key, 이메일, 비밀번호 등이 포함될 수 있다. 이를 그대로 AI API에 보내면 AI 서버에 저장될 수 있어 유출 위험이 있다. `sanitizer.py`에서 정규식으로 감지하여 마스킹 처리 후 프롬프트에 포함한다.
 
 ### 1-6. 환경변수 관리
 
@@ -84,26 +84,26 @@ API Key가 없는 환경(개발, CI/CD, 평가 환경)에서도 프로그램이 
 | 모듈 | 역할 | 핵심 함수 |
 |------|------|----------|
 | `git_collector.py` | Git 변경 사항 수집 | `get_status()` → git status 출력, `get_diff()` → git diff 출력 |
-| `sanitizer.py` | 민감정보 마스킹 | `mask_secrets(diff)` → 정규식으로 API Key/이메일/IP를 `[REDACTED]`로 치환 |
-| `ai_client.py` | AI API 호출 | `generate(prompt, temperature, max_tokens)` → async, timeout 30s, error handling |
+| `sanitizer.py` | 민감정보 마스킹 | `mask_sensitive(diff)` → 정규식으로 nvapi-/sk-/ghp_ API Key, 이메일, 비밀번호를 `***MASKED***`로 치환 |
+| `ai_client.py` | AI API 호출 | `generate_commit_message(prompt, git_info)` → 동기 requests.post, timeout 30s, error handling |
 | `prompt_builder.py` | 프롬프트 템플릿 | `build_commit_prompt(diff, files)` → 역할+양식+맥락+제약, `build_pr_prompt()` |
-| `main.py` | CLI 진입점 | `--commit`, `--pr`, `--mock` 옵션, `load_dotenv()` |
-| `validator.py` | 출력 검증 | `validate_commit(text)` → 제목 50자 이내, type: subject 형식 확인 |
+| `main.py` | CLI 진입점 | `commit`, `pr` subcommand, `--mock` 옵션, `load_dotenv()` |
+| `validator.py` | 출력 검증 | `validate_commit_message(text)` → 제목 50자 이내, type: subject 형식 확인 |
 
 ### 3-2. 자동화 흐름
 
 ```
-CLI 실행 (python main.py --commit)
+CLI 실행 (python main.py commit)
   ↓
 git_collector: git status + git diff 수집
   ↓
-sanitizer: 민감정보 마스킹 (nvapi-xxx, 이메일, IP)
+sanitizer: 민감정보 마스킹 (nvapi-xxx, sk-xxx, ghp_xxx, 이메일, 비밀번호)
   ↓
 prompt_builder: 커밋 메시지 템플릿 생성
   (역할: 시니어 개발자, 양식: Conventional Commits, 맥락: diff 요약)
   ↓
 ai_client: NVIDIA NIM API 호출
-  (model: llama-3.3-70b-instruct, temperature: 0.3, max_tokens: 500)
+  (model: llama-3.1-8b-instruct, temperature: 0.3, max_tokens: 500)
   ↓
 validator: 출력 형식 검증 (길이, 템플릿 준수)
   ↓
@@ -113,9 +113,9 @@ validator: 출력 형식 검증 (길이, 템플릿 준수)
 ### 3-3. CLI 옵션
 
 ```bash
-python main.py --commit          # 커밋 메시지 생성 (AI API 1회 호출)
-python main.py --pr              # PR 설명 생성 (AI API 1회 호출)
-python main.py --commit --mock   # Mock 모드 (API 호출 없이, 템플릿 결과)
+python main.py commit          # 커밋 메시지 생성 (AI API 1회 호출)
+python main.py pr              # PR 설명 생성 (AI API 1회 호출)
+python main.py commit --mock   # Mock 모드 (API 호출 없이, 템플릿 결과)
 ```
 
 ### 3-4. 사전평가 3회 개선
@@ -124,7 +124,7 @@ python main.py --commit --mock   # Mock 모드 (API 호출 없이, 템플릿 결
 |------|------|----------|----------|
 | 1회차 | 63% (10/16) | API Key 미설정 시 오류가 아닌 Mock 전환만 함, temperature/max_tokens 미문서화 | Mock 모드 추가, API 파라미터 문서화, --temperature/--max-tokens CLI 옵션 |
 | 2회차 | 94% (15/16) | 출력 형식 검증 부족 | validator.py 추가 — 제목 길이, Conventional Commits 형식 자동 검증 |
-| 3회차 | 100% (16/16) | — | 순환참조/직렬화 설명 README에 추가 (사전평가 기준 반영) |
+| 3회차 | 100% (16/16) | — | validator.py 추가 — 출력 형식 자동 검증 로직 |
 
 ---
 
@@ -138,7 +138,7 @@ python main.py --commit --mock   # Mock 모드 (API 호출 없이, 템플릿 결
 | 응답 잘림 | max_tokens 너무 낮음 | 500으로 증가 | AI 응답이 중간에 잘리는 문제 |
 | 응답 파싱 | 마크다운만 처리 | 일반 텍스트도 처리 | AI가 마크다운이 아닌 형식으로 반환하는 경우 대응 |
 | .env 자동 로딩 | 수동 로딩 | `python-dotenv` `load_dotenv()` | main.py에서 .env 자동 읽기 |
-| "OpenAI 호환" 문구 | README에 포함 | 전부 제거 | 과제 요구사항: "OpenAI 호환" 문구 제거 |
+| "OpenAI 호환" 문구 | 문서에 포함 | 전부 제거 | 과제 요구사항: "OpenAI 호환" 문구 제거 |
 
 ---
 
@@ -146,12 +146,12 @@ python main.py --commit --mock   # Mock 모드 (API 호출 없이, 템플릿 결
 
 | 선택 기로 | 선택 | 포기한 것 | 근거 |
 |----------|------|----------|------|
-| NVIDIA NIM vs OpenAI | NVIDIA NIM | OpenAI | 무료 크레딧, OpenAI 호환 엔드포인트, llama-3.3-70b-instruct |
+| NVIDIA NIM vs OpenAI | NVIDIA NIM | OpenAI | 무료 크레딧, chat/completions 표준 포맷, llama-3.1-8b-instruct |
 | temperature 값 | 0.3 | 0.7 (창의적) | 커밋 메시지는 정확성 > 창의성, 일관된 결과 |
 | max_tokens | 500 | 더 큰 값 | 커밋 메시지는 간결, 비용 절감 |
 | Mock 모드 | `--mock` / `AI_MOCK_MODE=true` | 단순함 | API Key 없이 개발/테스트, CI/CD 환경 |
 | API Key 관리 | 환경변수 `AI_API_KEY`만 | 하드코딩 편의성 | 보안 — 코드에 Key 절대 안 씀 |
-| 민감정보 처리 | sanitizer 정규식 마스킹 | 수동 확인 | 자동화 — API Key(`nvapi-xxx`), 이메일, IP 패턴 감지 |
+| 민감정보 처리 | sanitizer 정규식 마스킹 | 수동 확인 | 자동화 — NVIDIA NIM Key(`nvapi-xxx`), OpenAI Key(`sk-xxx`), GitHub PAT(`ghp_xxx`), 이메일, 비밀번호 패턴 감지 |
 | 모듈 분리 | 6개 파일로 분리 | 단일 파일 | 관심사 분리, 테스트 용이, 유지보수 |
 | 1회 실행 요청 제한 | commit/pr 각각 1회 호출 | 여러 번 | 과제 권장: 비용 방지, 로그에 호출 횟수 출력 |
 
@@ -187,7 +187,7 @@ python main.py --commit --mock   # Mock 모드 (API 호출 없이, 템플릿 결
 
 **문제**: `git diff`에 `.env` 파일 변경이 포함되어 API Key가 AI 프롬프트에 그대로 노출
 **원인**: 마스킹 처리 없이 diff를 프롬프트에 포함
-**해결**: `sanitizer.py`에서 정규식으로 `nvapi-[a-zA-Z0-9]+`, 이메일 패턴, IP 패턴을 `[REDACTED]`로 치환 후 프롬프트에 포함
+**해결**: `sanitizer.py`에서 정규식으로 `nvapi-[a-zA-Z0-9_\-]+`, `sk-[a-zA-Z0-9]+`, `ghp_[a-zA-Z0-9]+`, 이메일 패턴, 비밀번호 패턴을 `***MASKED***`로 치환 후 프롬프트에 포함
 
 ### 6-6. .env 자동 로딩 안 됨
 
@@ -205,7 +205,7 @@ python main.py --commit --mock   # Mock 모드 (API 호출 없이, 템플릿 결
 | temperature 영향? | 낮을수록 결정론적, 높을수록 창의적 → 커밋 메시지는 0.3 (정확성) | `ai_client.py: temperature=0.3` |
 | 프롬프트 설계 원리? | 역할 부여 + Conventional Commits 양식 + 변경 맥락 + 출력 형식 지정 | `prompt_builder.py` |
 | Git 연동 방식? | subprocess로 `git status`, `git diff` 실행 → 문자열 수집 → 프롬프트에 포함 | `git_collector.py` |
-| 민감정보 처리? | sanitizer로 정규식 마스킹 (API Key, 이메일, IP) → 마스킹된 diff만 프롬프트 | `sanitizer.py` |
+| 민감정보 처리? | sanitizer로 정규식 마스킹 (nvapi-/sk-/ghp_ API Key, 이메일, 비밀번호) → 마스킹된 diff만 프롬프트 | `sanitizer.py` |
 | 출력 검증? | validator로 제목 50자 이내, `type: subject` 형식 확인 → 불합격 시 경고 | `validator.py` |
 | Mock 모드 이유? | API Key 없이 개발/테스트, CI/CD 환경에서 API 호출 회피 | `--mock` / `AI_MOCK_MODE=true` |
 | 환경변수 관리? | `AI_API_KEY`를 `.env`에 저장, `load_dotenv()` 자동 로딩, 하드코딩 금지 | `main.py` |

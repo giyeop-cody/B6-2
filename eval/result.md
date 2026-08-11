@@ -38,5 +38,5 @@
 ## AI API: NVIDIA NIM
 - 인증: NVIDIA NIM API Key (Models 확장 권한)
 - 엔드포인트: https://integrate.api.nvidia.com/v1/chat/completions
-- 모델: meta/llama-3.3-70b-instruct
+- 모델: meta/llama-3.1-8b-instruct (3초 응답, 70b→8b 변경)
 - 무료 (1,000 credits)

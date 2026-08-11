@@ -34,7 +34,7 @@
 
 `--mock` 옵션을 주면 API Key 없이도 템플릿 기반으로 커밋 메시지를 생성합니다. 이건 개발이나 테스트 환경에서 API Key 발급 전에 도구를 테스트하기 위한 용도입니다.
 
-NVIDIA NIM를 사용하므로 API Key는 NVIDIA NIM API Key(Personal Access Token)입니다. Settings → Developer settings → Personal access tokens에서 Models 권한만 체크해서 발급하면 됩니다.
+NVIDIA NIM을 사용하므로 API Key는 NVIDIA NIM API Key(`nvapi-...` 형식)입니다. https://build.nvidia.com → Settings → API Keys에서 발급하면 됩니다. 신용카드가 불필요하고 무료 크레딧(1,000회)으로 충분합니다.
 
 ### Q4. "PR 초안은 어떤 구조로 생성되나요?"
 
@@ -50,7 +50,7 @@ Why/What/How to Test 세 섹션 구조로 생성됩니다. 프롬프트에 명�
 
 **A.**
 
-`sanitizer.py`가 항상 마스킹을 수행합니다. 정규표현식으로 8가지 패턴을 감지합니다 — NVIDIA NIM Key, NVIDIA NIM API Key, Supabase 키, 이메일, 비밀번호, JWT 토큰, AWS 키, 전화번호입니다. 감지된 패턴은 `***MASKED***`로 치환되어 AI 프롬프트에 전달됩니다.
+`sanitizer.py`가 항상 마스킹을 수행합니다. 정규표현식으로 9가지 패턴을 감지합니다 — NVIDIA NIM API Key(`nvapi-xxx`), OpenAI API Key(`sk-xxx`), GitHub PAT(`ghp_xxx`), Supabase 키, 이메일, 비밀번호, JWT 토큰, AWS 키, 전화번호입니다. 감지된 패턴은 `***MASKED***`로 치환되어 AI 프롬프트에 전달됩니다.
 
 `--safe-mode` 옵션을 추가하면 마스킹 외에도 diff를 최대 10개 파일, 200줄로 제한합니다.
 
@@ -62,7 +62,7 @@ Why/What/How to Test 세 섹션 구조로 생성됩니다. 프롬프트에 명�
 
 **A.**
 
-NVIDIA NIM는 NVIDIA NIM API Key으로 인증하는  API입니다. 이미 GitHub 계정이 있어서 PAT 발급이 간단했고, 무료(1,000 credits)에 신용카드가 불필요합니다. meta/llama-3.3-70b-instruct, Llama 3.3 70B, Phi-3 등 여러 모델을 선택할 수 있고, NVIDIA NIM SDK와 호환되어 기존 코드를 그대로 사용할 수 있습니다.
+NVIDIA NIM은 NVIDIA NIM API Key(`nvapi-...`)로 인증하는 API입니다. https://build.nvidia.com에서 무료 API Key를 발급받을 수 있고, 무료(1,000 credits)에 신용카드가 불필요합니다. 기본 모델은 `meta/llama-3.1-8b-instruct`(3초 응답)이며, llama-3.3-70b, Phi-3 등 여러 모델을 선택할 수 있습니다. 70b 모델은 176초가 걸려 30초 타임아웃으로 실패해서 8b로 변경했습니다.
 
 ### Q7. "temperature는 어떤 영향을 미치나요?"
 
