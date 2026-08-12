@@ -28,10 +28,15 @@ import sys
 import os
 import argparse
 from dotenv import load_dotenv
-from git_collector import GitCollector
-from ai_client import AIClient
-from prompt_builder import build_commit_prompt, build_pr_prompt
-from validator import validate_commit_message, validate_pr_draft, print_validation
+from commit_ai import (
+    GitCollector,
+    AIClient,
+    build_commit_prompt,
+    build_pr_prompt,
+    validate_commit_message,
+    validate_pr_draft,
+    print_validation,
+)
 
 
 def cmd_commit(args):

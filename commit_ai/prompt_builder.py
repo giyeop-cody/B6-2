@@ -3,7 +3,7 @@
 - git diff 정보를 AI 프롬프트로 변환
 - 커밋 메시지용 / PR 본문용 프롬프트 템플릿
 """
-from sanitizer import sanitize_diff
+from commit_ai.sanitizer import sanitize_diff
 
 
 def build_commit_prompt(git_info, safe_mode=False):
