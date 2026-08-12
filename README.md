@@ -82,17 +82,19 @@ python main.py pr --max-tokens 1000            # 더 긴 출력 허용
 ## 🏗️ 프로젝트 구조
 
 ```
-b6-2-app/
-├── main.py              # CLI 진입점 (commit/pr 명령, argparse)
-├── git_collector.py     # git status/diff 수집 (GitCollector 클래스)
-├── ai_client.py         # AI 클라이언트 (NVIDIA NIM API, mock 지원)
-├── prompt_builder.py    # 프롬프트 템플릿 (커밋/PR용)
-├── sanitizer.py         # 민감정보 마스킹 + --safe-mode
-├── validator.py         # 출력 형식 자동 검증
-├── .env.example         # 환경변수 예시
+B6-2/
+├── main.py                  # CLI 진입점 (commit/pr 명령, argparse)
+├── commit_ai/               # AI 커밋/PR 생성 패키지
+│   ├── __init__.py          # 패키지 공개 API
+│   ├── git_collector.py     # git status/diff 수집 (GitCollector)
+│   ├── ai_client.py         # AI 클라이언트 (NVIDIA NIM API, mock 지원)
+│   ├── prompt_builder.py    # 프롬프트 템플릿 (커밋/PR용)
+│   ├── sanitizer.py         # 민감정보 마스킹 + --safe-mode
+│   └── validator.py         # 출력 형식 자동 검증
+├── .env.example             # 환경변수 예시
 ├── .gitignore
 ├── requirements.txt
-└── docs/                # 추론 문서 (4개)
+└── docs/                    # 추론 문서 (4개)
 ```
 
 ---
