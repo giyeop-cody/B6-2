@@ -40,14 +40,41 @@ class GitCollector:
         return self._run_git(args)
 
     def get_all_diff(self):
-        """staged + unstaged diff를 모두 수집 (HEAD 기준)
-        새 파일(untracked)은 제외되지만, add된 파일은 포함됨
+        """staged + unstaged diff를 모두 수집
+
+        HEAD 기준으로 diff를 수집하되, 커밋이 없는 빈 레포에서는
+        git diff HEAD가 실패하므로 fallback 처리합니다.
         """
-        return self._run_git(["diff", "HEAD"])
+        try:
+            return self._run_git(["diff", "HEAD"])
+        except RuntimeError:
+            # HEAD가 없는 경우 (커밋이 없는 빈 레포)
+            # staged diff + unstaged diff를 따로 수집해서 합침
+            parts = []
+            try:
+                staged = self._run_git(["diff", "--cached"])
+                if staged:
+                    parts.append(staged)
+            except RuntimeError:
+                pass
+            try:
+                unstaged = self._run_git(["diff"])
+                if unstaged:
+                    parts.append(unstaged)
+            except RuntimeError:
+                pass
+            return "\n".join(parts)
 
     def get_branch(self):
-        """현재 브랜치명 반환"""
-        return self._run_git(["rev-parse", "--abbrev-ref", "HEAD"])
+        """현재 브랜치명 반환
+
+        커밋이 없는 빈 레포에서 HEAD가 없으므로 fallback 처리합니다.
+        """
+        try:
+            return self._run_git(["rev-parse", "--abbrev-ref", "HEAD"])
+        except RuntimeError:
+            # HEAD가 없는 경우 (빈 레포)
+            return "(no commits yet)"
 
     def get_changed_files(self):
         """변경된 파일 목록 반환 (git status --short 파싱)"""
