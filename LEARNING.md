@@ -573,6 +573,237 @@ AI가 너무 긴 메시지를 생성하거나 Conventional Commits 양식을 안
 
 ## 7. 과제 완료 후 학습한 내용 정리
 
+### 7.0 학습 목표 5개 상세 설명 (평가 대비)
+
+#### 목표 1: AI API를 REST API 방식으로 연동하는 전체 흐름
+
+**요청 구성 → 응답 처리 → 예외 대응의 전체 과정**
+
+이 과제에서 AI API(NVIDIA NIM)를 REST 방식으로 연동했습니다. "REST 방식"이란 HTTP로 요청을 보내고 JSON으로 응답을 받는 표준 웹 통신 방식입니다.
+
+**전체 흐름 (코드 기준):**
+
+```
+1. 요청 구성 (ai_client.py _call_real_api)
+   ├── URL: https://integrate.api.nvidia.com/v1/chat/completions
+   ├── 헤더: Authorization: Bearer {API_KEY} (인증)
+   ├── 바디: model, messages, temperature, max_tokens
+   └── Python의 requests.post()로 HTTP POST 요청
+
+2. 응답 처리 (ai_client.py)
+   ├── resp.raise_for_status() → HTTP 에러(401, 500 등) 감지
+   ├── resp.json() → JSON 딕셔너리 파싱
+   └── data["choices"][0]["message"]["content"] → AI가 생성한 텍스트 추출
+
+3. 예외 대응 (ai_client.py)
+   ├── requests.exceptions.Timeout → "AI API 요청 시간 초과 (30s)"
+   ├── requests.exceptions.ConnectionError → "AI API 연결 실패"
+   ├── 기타 Exception → "AI API 오류: {상세}"
+   └── 각각 None 반환 → main.py에서 [ERROR] 출력 후 종료
+```
+
+**비유**: AI API 연동은 "AI 요리사에게 재료(diff)를 보내고, 레시피(커밋 메시지)를 받아오는 배달 앱"입니다.
+- 요청 구성 = 배달 앱에서 주문서 작성 (메뉴=모델, 옵션=temperature)
+- 응답 처리 = 배달된 음식(JSON)에서 먹을 부분(content)만 꺼내기
+- 예외 대응 = 배달 지연(Timeout), 가게 문 닫음(ConnectionError) 대비
+
+**📁 보여줄 파일**: `commit_ai/ai_client.py`
+- `_call_real_api()`: requests.post → headers, payload 구성
+- `except Timeout / ConnectionError / Exception`: 3단계 예외 처리
+
+---
+
+#### 목표 2: temperature, max_tokens의 의미와 영향
+
+**temperature (창의성 조절):**
+
+AI가 다음 단어를 고를 때, 얼마나 "예측 가능한 단어"만 고를지 vs "다양한 단어"도 고를지 결정합니다.
+
+| temperature 값 | 동작 | 비유 | 적합한 용도 |
+|---------------|------|------|------------|
+| 0.0~0.2 | 거의 같은 입력에 같은 출력 | 똑같은 요리만 함 | 코드 생성, 커밋 메시지 |
+| 0.3~0.5 (기본) | 약간의 자연스러움 | 비슷하지만 약간 다른 요리 | 일반 문서, 요약 |
+| 0.7~1.0 | 매번 다른 결과 | 새로운 요리 창작 | 마케팅 문구, 아이디어 |
+
+이 과제에서 **0.3**을 선택한 이유: 커밋 메시지는 같은 변경에 대해 일관된 결과가 나와야 하므로, 낮은 temperature가 적합합니다.
+
+**max_tokens (출력 길이 제한):**
+
+AI가 생성할 수 있는 최대 텍스트 길이입니다. "토큰"은 대략 "단어 조각"으로 생각하면 됩니다.
+
+| max_tokens 값 | 출력 길이 | 문제 | 적합한 용도 |
+|---------------|----------|------|------------|
+| 200 | 매우 짧음 (1~2줄) | 커밋 본문이 잘릴 수 있음 | 커밋 제목만 필요할 때 |
+| 500 (기본) | 표준 (3~5줄) | 대부분의 커밋 메시지에 충분 | 커밋 메시지 (제목+본문) |
+| 1000+ | 긴 출력 (PR 본문 전체) | 비용 증가, 느려질 수 있음 | PR 본문 (Why/What/How 전체) |
+
+**LLM에 어떻게 전달되는가?**
+
+```python
+# ai_client.py — _call_real_api()
+payload = {
+    "model": self.model,           # 어떤 AI 모델 사용할지
+    "messages": [                  # AI에게 줄 대화 내용
+        {"role": "system", "content": system_prompt},  # 역할 부여
+        {"role": "user", "content": prompt},          # 실제 요청
+    ],
+    "temperature": self.temperature,  # 창의성 조절 (0.3)
+    "max_tokens": self.max_tokens,    # 출력 길이 제한 (500)
+}
+# HTTP POST로 NVIDIA NIM 서버에 전달
+resp = requests.post(self.api_url, json=payload, headers=headers, timeout=30)
+```
+
+이 파라미터들이 HTTP 요청의 JSON 바디에 포함되어 NVIDIA NIM 서버로 전달되고, 서버의 AI 모델이 이 값을 참고해서 응답을 생성합니다.
+
+**演示 순서**: `python main.py commit --temperature 0.1` → 로그에 `temperature=0.1` 표시 확인 → `python main.py commit --max-tokens 200` → 로그에 `max_tokens=200` 표시 확인
+
+**📁 보여줄 파일**: `commit_ai/ai_client.py` `__init__` (temperature, max_tokens 기본값) + `_call_real_api` (payload 구성)
+
+---
+
+#### 목표 3: Git 명령 결과를 프로그램 입력으로 연결
+
+**git status, git diff → Python 입력 → 자동화 흐름**
+
+```
+1. git_collector.py — GitCollector 클래스
+   ├── subprocess.run(["git", "status", "--short"]) → 변경된 파일 목록
+   ├── subprocess.run(["git", "diff", "HEAD"]) → 변경 내용(diff 텍스트)
+   └── 결과를 딕셔너리로 정리: {branch, changed_files, diff, file_count, diff_lines}
+
+2. sanitizer.py — 민감정보 마스킹
+   ├── diff 텍스트에서 API Key, 이메일, 비밀번호 등 패턴 검색
+   ├── 발견 시 ***MASKED***로 치환
+   └── --safe-mode 시 파일 10개, 200줄로 제한
+
+3. prompt_builder.py — 프롬프트 조립
+   ├── 마스킹된 diff + 파일 목록 + JSON 스키마 → AI에게 줄 프롬프트 완성
+   └── "이 변경 사항 분석해서 JSON 형식으로 응답해"
+
+4. ai_client.py — AI API 호출
+   ├── 조립된 프롬프트를 NVIDIA NIM 서버에 전달
+   ├── 응답(JSON) 받아서 파싱
+   └── 딕셔너리 반환
+
+5. main.py — 양식 조립 + 출력
+   ├── 딕셔너리 → "type: subject\n\n- bullet1\n- bullet2" 텍스트 조립
+   └── validator로 형식 검증 후 터미널 출력
+```
+
+**비유**: 자동화 흐름은 "공장 컨베이어 벨트"입니다.
+- Git 명령 = 원재료 채취 (광산에서 광물 캐기)
+- 마스킹 = 불순물 제거 (위험한 것 걸러내기)
+- 프롬프트 조립 = 작업 지시서 작성 (AI에게 "이렇게 만들어")
+- AI 호출 = 공장에 주문 (AI가 제품 제작)
+- 양식 조립 = 포장 (완성품을 규격 상자에 담기)
+
+**📁 보여줄 파일**: `commit_ai/git_collector.py`
+- `get_status()`: subprocess로 git status 실행
+- `get_diff()`: subprocess로 git diff 실행
+- `collect()`: 결과를 딕셔너리로 정리
+
+---
+
+#### 목표 4: 프롬프트 구성 원리
+
+**코드 변경 맥락을 AI가 요구사항에 맞는 요약을 생성하도록 하는 원리**
+
+프롬프트는 AI에게 주는 "작업 지시서"입니다. 같은 diff를 줘도 지시서에 따라 결과가 완전히 다릅니다.
+
+**커밋 메시지용 프롬프트 구조 (prompt_builder.py):**
+
+```
+[역할 부여]     → system: "당신은 Git 커밋 메시지 작성 전문가입니다"
+[변경 맥락]     → 변경된 파일 목록 + git diff 텍스트
+[작성 규칙]     → 1. type: feat/fix/docs/refactor/test/chore
+                  2. subject: 50자 이내, 한글
+                  3. body_points: 2~3개 bullet
+[응답 형식]     → JSON 스키마 전달 (type, subject, body_points)
+[제약]          → "JSON 외의 텍스트는 절대 출력하지 마세요"
+```
+
+**PR용 프롬프트 구조:**
+
+```
+[역할 부여]     → system: "당신은 PR 작성 전문가입니다"
+[변경 맥락]     → 브랜치명 + 파일 목록 + git diff
+[작성 규칙]     → title: type: 요약 (80자 이내)
+                  why: 변경 배경 (1~2 bullet)
+                  what: 핵심 변경 (2~3 bullet)
+                  how_to_test: 테스트 방법 (2~3 bullet)
+[응답 형식]     → JSON 스키마 전달 (title, why, what, how_to_test)
+[제약]          → "JSON 외의 텍스트는 절대 출력하지 마세요"
+```
+
+**왜 이 구조인가?**
+
+| 프롬프트 요소 | 없으면 어떻게 되는가 | 있는 효과 |
+|-------------|-------------------|---------|
+| 역할 부여 | AI가 일반적인 답변 | 전문가 수준의 결과 |
+| 변경 맥락 | AI가 추측해야 함 | 정확한 분석 |
+| 작성 규칙 | 양식이 제각각 | 일관된 형식 |
+| JSON 스키마 | 자유 텍스트 → 파싱 어려움 | 구조화된 데이터 → 파싱 가능 |
+| 제약 | 불필요한 설명 추가 | 깔끔한 JSON만 반환 |
+
+**演示 순서**: prompt_builder.py 열어서 `COMMIT_SCHEMA`와 `PR_SCHEMA` 보여줌 → "이 스키마를 프롬프트에 포함해서 AI에게 JSON으로 응답하라고 합니다"
+
+**📁 보여줄 파일**: `commit_ai/prompt_builder.py`
+- `COMMIT_SCHEMA`: 커밋 메시지 JSON 스키마
+- `PR_SCHEMA`: PR 초안 JSON 스키마
+- `build_commit_prompt()`: 스키마 + diff + 규칙 조립
+
+---
+
+#### 목표 5: 출력 검증과 다듬기
+
+**실무 규칙을 만족하도록 검증하는 이유와 방법**
+
+AI가 항상 지시한 대로 응답하는 것은 아닙니다. 그래서 검증이 필요합니다.
+
+**validator.py의 검증 항목:**
+
+| 검증 대상 | 규칙 | 검증 방법 | 위반 시 |
+|----------|------|----------|---------|
+| 커밋 제목 | `type: 요약` 형식 | 정규식 매칭 | ❌ 오류 |
+| 커밋 제목 | 50자 이내 (최대 72자) | 문자열 길이 체크 | ⚠️ 경고 |
+| 커밋 본문 | 3~5줄 권장 | 줄 수 체크 | ⚠️ 경고 |
+| PR 제목 | 80자 이내 | 문자열 길이 체크 | ⚠️ 경고 |
+| PR 본문 | Why/What/How 섹션 헤더 | 섹션 존재 확인 | ❌ 오류 |
+| PR 본문 | 각 섹션 최소 1개 bullet | bullet 개수 확인 | ⚠️ 경고 |
+
+**완성된 텍스트로 검증하는 이유:**
+
+```
+AI 응답 (JSON) → 파이썬으로 양식 조립 → 조립된 텍스트로 검증
+                                         ↑
+                                   "실제 사용자가 볼 텍스트"로 검증
+```
+
+JSON 파싱은 성공했어도, 조립된 최종 텍스트가 실무 규칙을 만족하는지 별도로 확인해야 합니다. 예: JSON의 subject가 100자면 파싱은 성공하지만 50자 규칙 위반입니다.
+
+**검증 후 사용자 안내:**
+
+```
+[VALIDATION] 커밋 메시지 형식 검증 통과 ✅     → 그대로 사용 가능
+[VALIDATION] 커밋 메시지 형식 오류 (1개):      → 수정 후 적용
+  ❌ 제목이 'type: 요약' 형식이 아닙니다.
+[VALIDATION] 커밋 메시지 형식 경고 (1개):      → 참고만 하고 사용 가능
+  ⚠️ 본문이 14줄로 다소 깁니다. 3~5줄을 권장합니다.
+[INFO] 생성된 메시지는 초안입니다. 검토 후 적용하세요.
+```
+
+**비유**: 검증은 "품질 검사관"입니다. AI가 만든 제품이 규격(길이, 형식)에 맞는지 확인하고, 불합격 시 사용자에게 "이 부분 수정해"라고 안내합니다.
+
+**演示 순서**: validator.py 열어서 검증 항목 표시 → `python main.py commit` 실행 후 `[VALIDATION]` 라인 보여줌
+
+**📁 보여줄 파일**: `commit_ai/validator.py`
+- `validate_commit_message()`: 제목 형식, 길이, 본문 줄 수 검증
+- `validate_pr_draft()`: 섹션 헤더, bullet 개수 검증
+- `print_validation()`: ✅/❌/⚠️ 결과 출력
+
+---
+
 ### 7.1 배운 것: "AI API의 핵심은 호출이 아니라 프롬프트 설계"
 
 **과제 전:** "AI API 연동 = API 호출 코드 작성"
