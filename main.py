@@ -39,6 +39,66 @@ from commit_ai import (
 )
 
 
+def format_commit_message(data):
+    """JSON dict → 커밋 메시지 텍스트 (양식에 맞게 조립)
+
+    입력: {"type": "feat", "subject": "요약", "body_points": ["bullet1", "bullet2"]}
+    출력: feat: 요약
+
+    - bullet1
+    - bullet2
+    """
+    commit_type = data.get("type", "fix")
+    subject = data.get("subject", "")
+    body_points = data.get("body_points", [])
+
+    # 제목 조립: type: subject
+    title = f"{commit_type}: {subject}"
+
+    # 본문 조립: bullet points
+    if body_points:
+        body = "\n".join(f"- {point}" for point in body_points)
+        return f"{title}\n\n{body}"
+    return title
+
+
+def format_pr_draft(data):
+    """JSON dict → PR 초안 텍스트 (양식에 맞게 조립)
+
+    입력: {"title": "...", "why": [...], "what": [...], "how_to_test": [...]}
+    출력: ## PR Title / ## PR Body (### Why/What/How to Test)
+    """
+    title = data.get("title", "")
+    why = data.get("why", [])
+    what = data.get("what", [])
+    how_to_test = data.get("how_to_test", [])
+
+    lines = []
+    lines.append("## PR Title")
+    lines.append(title)
+    lines.append("")
+    lines.append("## PR Body")
+
+    if why:
+        lines.append("### Why")
+        for item in why:
+            lines.append(f"- {item}")
+        lines.append("")
+
+    if what:
+        lines.append("### What")
+        for item in what:
+            lines.append(f"- {item}")
+        lines.append("")
+
+    if how_to_test:
+        lines.append("### How to Test")
+        for item in how_to_test:
+            lines.append(f"- {item}")
+
+    return "\n".join(lines)
+
+
 def cmd_commit(args):
     """커밋 메시지 자동 생성"""
     collector = GitCollector()
@@ -63,14 +123,18 @@ def cmd_commit(args):
         print("[ERROR] 커밋 메시지 생성에 실패했습니다.")
         sys.exit(1)
 
+    # JSON → 양식에 맞게 조립
+    formatted = format_commit_message(result)
+
     print("[DONE] 커밋 메시지 생성 완료")
     print(f"[INFO] AI API 호출 횟수: {'0 (mock)' if client.is_mock else '1'}")
     print()
     print("--- Commit Message ---")
-    print(result)
+    print(formatted)
     print("----------------------")
 
-    errors, warnings = validate_commit_message(result)
+    # 조립된 텍스트로 검증
+    errors, warnings = validate_commit_message(formatted)
     print_validation(errors, warnings, "커밋 메시지")
 
     print("[INFO] 생성된 메시지는 초안입니다. 검토 후 적용하세요.")
@@ -101,23 +165,26 @@ def cmd_pr(args):
         print("[ERROR] PR 초안 생성에 실패했습니다.")
         sys.exit(1)
 
+    # JSON → 양식에 맞게 조립
+    formatted = format_pr_draft(result)
+
     print("[DONE] PR 초안 생성 완료")
     print(f"[INFO] AI API 호출 횟수: {'0 (mock)' if client.is_mock else '1'}")
     print()
     print("--- PR Draft ---")
-    print(result)
+    print(formatted)
     print("----------------")
 
-    errors, warnings = validate_pr_draft(result)
+    # 조립된 텍스트로 검증
+    errors, warnings = validate_pr_draft(formatted)
     print_validation(errors, warnings, "PR 초안")
 
     print("[INFO] 생성된 PR 초안은 자동 적용되지 않습니다. 검토 후 적용하세요.")
 
 
 def main():
-    # .env 파일 자동 로딩 (.env.example을 .env로 복사 후 값만 수정하면 바로 작동)
     load_dotenv()
-    
+
     parser = argparse.ArgumentParser(
         description="내가 고친 코드 설명을 AI가 대신 써주는 도우미",
         formatter_class=argparse.RawDescriptionHelpFormatter,
